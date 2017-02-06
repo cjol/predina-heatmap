@@ -2,6 +2,7 @@
  * Created by christoph on 03/02/17.
  */
 import React, {Component} from "react";
+import icon from "./img/sitemarker.png";
 
 class SiteMarker extends Component {
 	render() {
@@ -9,9 +10,13 @@ class SiteMarker extends Component {
 			<div style={{
 				width: 25,
 				height: 25,
+				marginLeft: -12.5,
+				marginTop: -12.5,
 				borderRadius: 12.5,
-				border: "2px solid black",
-				backgroundColor: "rgba(0, 0, 0, 0.2)",
+				background: `url(${icon})`,
+				// just to re-center this particular icon
+				backgroundSize: "175%",
+				backgroundPosition: "49% 33%",
 			}} />
 		);
 	}
