@@ -21,6 +21,7 @@ class App extends Component {
 				( { lat, lng }, i ) =>
 					({
 						id: "" + i,
+						name: "Site " + (i+1),
 						lat,
 						lng,
 						risk: Math.random()
@@ -39,7 +40,7 @@ class App extends Component {
 			<LocaleProvider locale={enGB}>
 				<div className="App">
 					<HeatMap riskPoints={this.state.riskPoints} sites={this.state.sites} activeSite={this.state.activeSite}/>
-					<Menu />
+					<Menu sites={this.state.sites} activeSite={this.state.activeSite} setSite={(s) => console.log(s) || this.setState({activeSite:s})} />
 				</div>
 			</LocaleProvider>
 		);

@@ -39,6 +39,7 @@ class HeatMap extends React.Component {
 	render() {
 		if (this.props.sites && this.props.sites.length > 0) {
 
+			console.log("Rendering", this.props.activeSite);
 			return (
 				<div style={{
 					position: "absolute",
@@ -60,7 +61,7 @@ class HeatMap extends React.Component {
 					               zoom={14}
 					               googleAPIKey="AIzaSyBrHnamVKGI2E-ZJ33HVtbLcefIaKijwbA">
 						{
-							this.props.sites.map( s => <SiteMarker key={s.id} {...s} /> )
+							this.props.sites.map( s => <SiteMarker key={s.id} {...s} active={s.id===this.props.activeSite.id} /> )
 						}
 					</GoogleHeatmap>
 				</div>);

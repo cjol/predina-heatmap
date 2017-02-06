@@ -7,8 +7,24 @@ import moment from "moment";
 import Nameplate from "./Nameplate";
 const FormItem = Form.Item;
 
+const siteType = React.PropTypes.shape(
+	{
+		lat: React.PropTypes.number,
+		lng: React.PropTypes.number,
+		id: React.PropTypes.string,
+		name: React.PropTypes.string,
+		risk: React.PropTypes.number
+	}
+);
 class Menu extends Component {
-	static propTypes = {};
+	static propTypes = {
+		sites: React.PropTypes.arrayOf(
+			siteType
+		),
+		activeSite: siteType,
+		setSite: React.PropTypes.func
+	};
+
 	static defaultProps = {};
 
 	getLiveConditions = () => {
@@ -60,10 +76,11 @@ class Menu extends Component {
 									rules: [ { required: false } ],
 								}
 							)(
-								<Select>
-									<Select.Option value="1">Site 1</Select.Option>
-									<Select.Option value="2">Site 2</Select.Option>
-									<Select.Option value="3">Site 3</Select.Option>
+								<Select onChange={(e) => console.log(arguments) || this.props.setSite(this.props.sites.filter(s => s.id===e)[0])} >
+									{this.props.sites.map(
+										(s,i) =>
+											<Select.Option value={s.id} key={i} >{s.name}</Select.Option>
+									)}
 								</Select>
 							)}
 						</FormItem>

@@ -17,6 +17,7 @@ class SiteMarker extends Component {
 				// just to re-center this particular icon
 				backgroundSize: "175%",
 				backgroundPosition: "49% 33%",
+				backgroundColor: this.props.active ? "blue" : "transparent",
 			}} />
 		);
 	}
