@@ -75,12 +75,13 @@ class Menu extends Component {
 							Risk Score
 						</div>
 						<div className="riskNumber">
-							<div style={{position:"absolute", fontSize: "100%", top:0, bottom:0, right:0}}>
+							<div style={{position:"absolute", fontSize: "100%", top:0, bottom:0, left:0}}>
 								<div style={{width:10, position:"absolute", left:0, top:0, bottom:0, background: "linear-gradient(to top, #00d3a2 0%,#53c6db 33%,#ea8825 66%,#ef3817 100%)"}}></div>
 								<div style={{position:"absolute", top:0, left:20}}>High (10)</div>
 								<div style={{position:"absolute", bottom:0, left:20}}>Low (0)</div>
 							</div>
 							<div style={{
+								width: "100%",
 								color: riskColor
 							}}>
 								{this.props.risk}
