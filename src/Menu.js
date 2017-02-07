@@ -1,49 +1,31 @@
 /**
  * Created by cjol on 03/02/17.
  */
-import {TimePicker, Select, Button, DatePicker, Form} from "antd";
+import {TimePicker, Button, Select, DatePicker, Form} from "antd";
 import React, {Component} from "react";
-import moment from "moment";
 import Nameplate from "./Nameplate";
+import xolor from "xolor";
 const FormItem = Form.Item;
 
-const siteType = React.PropTypes.shape(
-	{
-		lat: React.PropTypes.number,
-		lng: React.PropTypes.number,
-		id: React.PropTypes.string,
-		name: React.PropTypes.string,
-		risk: React.PropTypes.number
-	}
-);
 class Menu extends Component {
 	static propTypes = {
 		sites: React.PropTypes.arrayOf(
-			siteType
-		),
-		activeSite: siteType,
-		setSite: React.PropTypes.func
-	};
-
-	static defaultProps = {};
-
-	getLiveConditions = () => {
-		console.log( "TBC" );
-	};
-
-	handleSubmit( e ) {
-		e.preventDefault();
-		this.props.form.validateFields(
-			( err, values ) => {
-				if (!err) {
-					console.log( 'Received values of form: ', values );
+			React.PropTypes.shape(
+				{
+					id: React.PropTypes.string.isRequired,
+					name: React.PropTypes.string.isRequired
 				}
-			}
-		);
-	}
+			)
+		).isRequired,
+		onChange: React.PropTypes.func.isRequired,
+	};
 
 	render() {
 		const { getFieldDecorator } = this.props.form;
+		const gradientColor = xolor( '#00d3a2' );
+		const riskColor =
+			gradientColor.gradient( '#ef3817', this.props.risk / 10 );
+// "linear-gradient(to top, #00d3a2 0%,#53c6db 33%,#ea8825 66%,#ef3817 100%)"
 		return (
 			<div style={{
 				padding: 10,
@@ -55,12 +37,11 @@ class Menu extends Component {
 				boxShadow: "0 0 10px 3px rgba(0,0,0,0.5)"
 			}}>
 
-				<Form onSubmit={this.handleSubmit}
-				      horizontal={true}
-				      vertical={false}
-				      style={{ position: "relative", height: "100%" }}
+				<Form
+					style={{ position: "relative", height: "100%" }}
 				>
 
+					{/* TOP PORTION */}
 					<div style={{
 						left: 0,
 						right: 0,
@@ -76,38 +57,54 @@ class Menu extends Component {
 									rules: [ { required: false } ],
 								}
 							)(
-								<Select onChange={(e) => console.log(arguments) || this.props.setSite(this.props.sites.filter(s => s.id===e)[0])} >
+								<Select>
 									{this.props.sites.map(
-										(s,i) =>
-											<Select.Option value={s.id} key={i} >{s.name}</Select.Option>
+										( s, i ) =>
+											<Select.Option value={s.id} key={s.id}>{s.name}</Select.Option>
 									)}
 								</Select>
 							)}
 						</FormItem>
 
-						<Button size="large" style={{ width: "100%" }} type="primary" onClick={this.getLiveConditions}>
+						<Button size="large" style={{ width: "100%" }} type="primary"
+						        onClick={this.props.getLiveConditions}>
 							Get Live Conditions
 						</Button>
+
+						<div style={{textAlign: "center", fontSize:"150%", marginTop:20, clear:"both", width:"100%"}}>
+							Risk Score
+						</div>
+						<div className="riskNumber">
+							<div style={{position:"absolute", fontSize: "100%", top:0, bottom:0, right:0}}>
+								<div style={{width:10, position:"absolute", left:0, top:0, bottom:0, background: "linear-gradient(to top, #00d3a2 0%,#53c6db 33%,#ea8825 66%,#ef3817 100%)"}}></div>
+								<div style={{position:"absolute", top:0, left:20}}>High (10)</div>
+								<div style={{position:"absolute", bottom:0, left:20}}>Low (0)</div>
+							</div>
+							<div style={{
+								color: riskColor
+							}}>
+								{this.props.risk}
+							</div>
+						</div>
 					</div>
 
+
+					{/* BOTTOM PORTION */}
 					<div style={{
 						left: 0,
 						right: 0,
 						bottom: 0,
 						position: "absolute"
 					}}>
+
 						<FormItem
 							label="Date">
 							{getFieldDecorator(
 								'date', {
 									rules: [ { required: true, message: 'Please select a date!' } ],
-									initialValue: moment()
 								}
 							)(
-								<DatePicker style={{
-									width: "100%"
-								}}
-								/>
+								<DatePicker style={{ width: "100%" }}/>
 							)}
 						</FormItem>
 
@@ -115,13 +112,10 @@ class Menu extends Component {
 							label="Time">
 							{getFieldDecorator(
 								'time', {
-									rules: [ { required: true, message: 'Please select a date!' } ],
-									initialValue: moment()
+									rules: [ { required: true, message: 'Please select a time!' } ],
 								}
 							)(
-								<TimePicker style={{
-									width: "100%"
-								}}/>
+								<TimePicker style={{ width: "100%" }}/>
 							)}
 						</FormItem>
 
@@ -150,7 +144,7 @@ class Menu extends Component {
 								<Select>
 									<Select.Option value="sunny">Sunny</Select.Option>
 									<Select.Option value="rainy">Rainy</Select.Option>
-									<Select.Option value="snowy">Snowy</Select.Option>
+									<Select.Option value="cloudy">Cloudy</Select.Option>
 								</Select>
 							)}
 						</FormItem>
@@ -158,7 +152,7 @@ class Menu extends Component {
 						<FormItem
 							label="Day/Night">
 							{getFieldDecorator(
-								'day', {
+								'daynight', {
 									rules: [ { required: true, message: 'Please select day/night!' } ],
 								}
 							)(
@@ -176,4 +170,45 @@ class Menu extends Component {
 	}
 }
 
-export default Form.create()( Menu );
+export default Form.create(
+	{
+
+		onFieldsChange: ( props, changedFields ) => {
+			if ("site" in changedFields) {
+				changedFields.site.value = props.sites.find(
+					s => s.id === changedFields.site.value
+				);
+			}
+			props.onChange( changedFields );
+		},
+
+		mapPropsToFields: ( props ) => {
+			return {
+				traffic: {
+					...props.traffic,
+					value: props.traffic.value
+				},
+				weather: {
+					...props.weather,
+					value: props.weather.value
+				},
+				daynight: {
+					...props.daynight,
+					value: props.daynight.value
+				},
+				time: {
+					...props.time,
+					value: props.time.value
+				},
+				date: {
+					...props.date,
+					value: props.date.value
+				},
+				site: {
+					...props.site,
+					value: props.site.value.id
+				},
+			};
+		},
+	}
+)( Menu );

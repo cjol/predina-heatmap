@@ -2,6 +2,17 @@
   text-align: center;
 }
 
+.riskNumber  {
+  position:relative;
+  margin-top: 5px;
+}
+
+.riskNumber > div {
+  text-align: center;
+  font-size: 500%;
+  width:50%;
+}
+
 .App-logo {
   animation: App-logo-spin infinite 20s linear;
   height: 80px;

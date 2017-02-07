@@ -37,6 +37,34 @@ class GoogleHeatmap extends React.Component {
 		dissipating: true
 	};
 
+	componentWillReceiveProps(nextProps) {
+		this.updateMap(nextProps.points);
+	}
+
+	updateMap(points) {
+
+		// if we're updating, we should remove the old one
+		if (this.heatmap) {
+			this.heatmap.setMap(null);
+		}
+
+		// now create a new one (the old one should have no dangling references left so should be GC'd)
+		this.heatmap = new this.maps.visualization.HeatmapLayer(
+			{
+				data: this.props.points.map(
+					p => ({ location: new this.maps.LatLng( p.lat, p.lng ), weight: p.weight })
+				),
+				dissipating: this.props.dissipating,
+				gradient: this.props.gradient,
+				radius: this.props.radius,
+			}
+		);
+
+		// finally attach the new one
+		this.heatmap.setMap(this.map);
+
+	}
+
 	render() {
 		return (
 			<GoogleMap
@@ -44,23 +72,13 @@ class GoogleHeatmap extends React.Component {
 					key: this.props.googleAPIKey,
 					libraries: 'visualization',
 				}}
-				defaultCenter={this.props.center}
-				defaultZoom={this.props.zoom}
+				center={this.props.center}
+				zoom={this.props.zoom}
 				yesIWantToUseGoogleMapApiInternals
 				onGoogleApiLoaded={( { map, maps } ) => {
-
-					this.heatmap = new maps.visualization.HeatmapLayer(
-						{
-							data: this.props.points.map(
-								p => ({ location: new maps.LatLng( p.lat, p.lng ), weight: p.weight })
-							),
-							map: map,
-							dissipating: this.props.dissipating,
-							gradient: this.props.gradient,
-							radius: this.props.radius,
-						}
-					);
-
+					this.maps = maps;
+					this.map = map;
+					this.updateMap(this.props.points);
 				}}
 			>
 				{this.props.children}
