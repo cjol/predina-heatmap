@@ -44,7 +44,7 @@ class App extends Component {
 
 	handleFormChange = ( changedFields ) => {
 		this.setState( {
-			risk: Math.floor(Math.random()),
+			risk: Math.floor(Math.random()*10),
 		  	conditions: { ...this.state.conditions, ...changedFields }
 		} );
 
@@ -122,7 +122,7 @@ function getPoints( sites, n ) {
 				() => ({
 					lat: s.lat + Math.random() * 0.001 - 0.0005,
 					lng: s.lng + Math.random() * 0.001 - 0.0005,
-					risk: Math.random()
+					risk: Math.random() * 10
 				})
 			)
 	);

@@ -71,7 +71,7 @@ class Menu extends Component {
 							Get Live Conditions
 						</Button>
 
-						<div style={{textAlign: "center", fontSize:"150%", marginTop:20, clear:"both", width:"100%"}}>
+						<div style={{textAlign: "center", fontSize:"150%", marginTop:60, clear:"both", width:"100%"}}>
 							Risk Score
 						</div>
 						<div className="riskNumber">
