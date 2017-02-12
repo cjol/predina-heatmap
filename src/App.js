@@ -7,6 +7,7 @@ import "antd/dist/antd.css";
 import {LocaleProvider} from "antd";
 import enGB from "antd/lib/locale-provider/en_US";
 import "moment/locale/en-gb";
+import Site from "./Site";
 
 moment.locale( 'en-gb' );
 
@@ -15,72 +16,95 @@ class App extends Component {
 	constructor() {
 		super();
 
-		// eslint-disable-next-line
-		this.state = {
-			sites: getSites( 10 ).map(
-				( { lat, lng }, i ) =>
-					({
-						id: "" + i,
-						name: "Site " + (i + 1),
-						lat,
-						lng,
-					})
-			),
-			risk: Math.floor(Math.random()*10)
+		// level 0 - country
+		const baseSite = new Site( { lat: 51.4834622, lng: -0.0586256 } );
+		baseSite.name  = "United Kingdom";
+
+		// level 1 - region
+		baseSite.subsites = getSites( 5, baseSite );
+		baseSite.subsites
+			.forEach(
+				s => {
+					s.name = "Region " + s.id;
+
+					// level 2 - city
+					s.subsites = getSites( 1, s );
+					s.subsites.forEach(
+						ss => {
+							ss.name = "City " + ss.id;
+
+							// level 3 - site
+							ss.subsites = getSites( 0.1, ss );
+							ss.subsites.forEach(
+								sss => {
+									sss.name = "Site " + sss.id;
+
+									// TODO: get risk from API
+									sss.baseRisk = Math.random() * 10;
+								}
+							);
+						}
+					);
+				}
+			);
+		this.baseSite = baseSite;
+
+		const riskPoints       = baseSite.flatChildren();
+		const sites            = baseSite.subsites;
+		const globalConditions = {
+			date    : { value: moment() },
+			time    : { value: moment() },
+			daynight: { value: (new Date()).getHours() < 19 ? "day" : "night" },
 		};
 
 		// eslint-disable-next-line
-		this.state.riskPoints = getPoints( this.state.sites, 1 );
-		// eslint-disable-next-line
-		this.state.conditions = {
-			date: { value: moment() },
-			time: { value: moment() },
-			traffic: { value: "1" },
-			weather: { value: "rainy" },
-			daynight: { value: "day" },
-			site: { value: this.state.sites[ 0 ] },
+		this.state = {
+			sites     : sites,
+			activeSite: baseSite,
+			viewLevel : 0,
+			riskPoints,
+			globalConditions,
 		};
 	}
 
-	handleFormChange = ( changedFields ) => {
-		this.setState( {
-			risk: Math.floor(Math.random()*10),
-		  	conditions: { ...this.state.conditions, ...changedFields }
-		} );
-
-		if (
-			"date" in changedFields ||
-			"time" in changedFields ||
-			"traffic" in changedFields ||
-			"weather" in changedFields ||
-			"daynight" in changedFields
-		) {
-			// TODO: There might be a bug whereby the first change doesn't update
-			//      it might be something else like update N displaying at N+1
-			const newPoints = getPoints( this.state.sites, 10 );
+	goUpLevel = () => {
+		const parent = this.state.activeSite.parent;
+		if (parent !== null) {
 			this.setState(
 				{
-					riskPoints: newPoints,
+					activeSite: parent,
+					viewLevel : this.state.viewLevel - 1,
+				},
+				// intensities stack in a funny way if you don't do this. Not sure why
+				() => this.forceUpdate()
+			);
+		}
+	};
+
+	setActiveSite = ( s ) => {
+		if (s.subsites.length > 0) {
+			this.setState(
+				{
+					activeSite: s,
+					viewLevel : this.state.viewLevel + 1,
 				}
 			);
 		}
 	};
 
-	getLiveConditions = async () => {
+	changeGlobalConditions = ( changedFields ) => {
+
 		this.setState(
-			{
-				risk: Math.floor(Math.random()*10),
-				conditions: {
-					date: { value: moment() },
-					time: { value: moment() },
-					daynight: { value: (new Date()).getHours()<19 ? "day" : "night" },
-					site: { value: this.state.sites[ 0 ] },
-					// could pull this from a live API if you want to
-					traffic: { value: ["1", "2", "3"][(new Date()).getMinutes()%3] },
-					weather: { value: ["rainy", "sunny", "cloudy"][(new Date()).getHours()%3] },
-				}
-			}
+			state =>
+				({
+					...state,
+					globalConditions: { ...state.globalConditions, ...changedFields },
+				}),
+			// TODO: remove this
+			// trick the base sites into re-generating risks
+			() => this.baseSite.updateLocalConditions( {} )
 		);
+
 	};
 
 	render() {
@@ -88,15 +112,14 @@ class App extends Component {
 			<LocaleProvider locale={enGB}>
 				<div className="App">
 					<HeatMap
-						riskPoints={[]}
-						sites={this.state.sites}
-						activeSite={this.state.conditions.site.value}/>
+						setActiveSite={this.setActiveSite}
+						viewLevel={ this.state.viewLevel }
+						activeSite={this.state.activeSite}/>
 					<Menu sites={this.state.sites}
-					      risk={this.state.risk}
-					      getLiveConditions={this.getLiveConditions}
-					      {...this.state.conditions}
-					      onChange={this.handleFormChange}
-					/>
+					      goUpLevel={this.goUpLevel}
+					      {...this.state.globalConditions}
+					      changeGlobalConditions={this.changeGlobalConditions}
+					      activeSite={this.state.activeSite}/>
 				</div>
 			</LocaleProvider>
 		);
@@ -105,28 +128,48 @@ class App extends Component {
 
 export default App;
 
-function getSites( n ) {
-	const { lat, lng } = { lat: 51.4834622, lng: -0.0586256 };
-	return Array( n ).fill().map(
-		() => ({
-			lat: lat + Math.random() * 0.01 - 0.005,
-			lng: lng + Math.random() * 0.01 - 0.005
-		})
+function getSites( scale = 0.01, parent = null ) {
+	const n = 10;
+	return new Array( n ).fill().map(
+		() => new Site( parent, scale )
 	);
 }
 
-function getPoints( sites, n ) {
-	const nested = sites.map(
-		s =>
-			Array( n ).fill().map(
-				() => ({
-					lat: s.lat + Math.random() * 0.001 - 0.0005,
-					lng: s.lng + Math.random() * 0.001 - 0.0005,
-					risk: Math.random() * 10
-				})
-			)
-	);
-	return [].concat.apply( [], nested );
-}
+//
+// function localRisk( { lat:plat, lng:plng }, points ) {
+// 	const closestPoint = points.reduce(
+// 		( acc, curr ) => {
+//
+// 			const { lat, lng } = curr,
+// 			      { dist2 }    = acc,
+// 			      newDist2     = Math.pow( lat - plat, 2 ) + Math.pow( lng - plng, 2 );
+// 			if (newDist2 < dist2) {
+// 				return { dist2: newDist2, point: curr };
+// 			} else {
+// 				return acc;
+// 			}
+// 		}, { dist2: Infinity, point: { risk: 0 } }
+// 	);
+// 	console.log( closestPoint.point.risk );
+// 	return closestPoint.point.risk;
+// }
+//
+// function getPoints( sites, globalConditions ) {
+// 	const n      = 1;
+// 	// TODO: connect to API
+// 	const nested = sites.map(
+// 		s =>
+// 			Array( n ).fill().map(
+// 				() => ({
+// 					// lat : s.lat + Math.random() * 0.001 - 0.0005,
+// 					// lng : s.lng + Math.random() * 0.001 - 0.0005,
+// 					lat     : s.lat,
+// 					lng     : s.lng,
+// 					risk    : Math.random() * 10,
+// 				})
+// 			)
+// 	);
+// 	return [].concat.apply( [], nested );
+// }
 
 

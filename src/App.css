@@ -1,35 +1,64 @@
 .App {
-  text-align: center;
+	text-align: center;
 }
 
-.riskNumber  {
-  position:relative;
-  margin-top: 5px;
+.riskNumber {
+	position: relative;
+	margin-top: 5px;
 }
 
 .riskNumber > div {
-  text-align: center;
-  font-size: 900%;
-  width:50%;
+	text-align: center;
+	font-size: 900%;
+	width: 50%;
 }
 
 .App-logo {
-  animation: App-logo-spin infinite 20s linear;
-  height: 80px;
+	animation: App-logo-spin infinite 20s linear;
+	height: 80px;
 }
 
 .App-header {
-  background-color: #222;
-  height: 150px;
-  padding: 20px;
-  color: white;
+	background-color: #222;
+	height: 150px;
+	padding: 20px;
+	color: white;
 }
 
 .App-intro {
-  font-size: large;
+	font-size: large;
 }
 
 @keyframes App-logo-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+	from {
+		transform: rotate(0deg);
+	}
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.popover {
+	border-radius: 5px;
+	margin-top: -42px;
+	box-shadow: 0 0 5px rgba(0, 0, 0, 0.4);
+	font-size: 12px;
+	font-family: 'Helvetica', sans-serif;
+	margin-left: -95px;
+	padding: 7px 10px;
+	width: 200px;
+	z-index: 4;
+}
+
+.popover::before {
+	border-top: 7px solid rgba(0, 0, 0, 0.85);
+	background-color:white;
+	border-right: 7px solid transparent;
+	border-left: 7px solid transparent;
+	bottom: -7px;
+	content: '';
+	display: block;
+	left: 50%;
+	margin-left: -7px;
+	position: absolute;
 }

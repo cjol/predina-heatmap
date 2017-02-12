@@ -3,28 +3,41 @@
  */
 import React, {Component} from "react";
 import icon from "./img/sitemarker.png";
+import {Popover} from "antd";
+import SiteConditionsEditor from "./SiteConditionsEditor";
+import Site from "./Site";
 
 class SiteMarker extends Component {
+	static propTypes = {
+		onClick: React.PropTypes.func,
+		site: Site.ReactType,
+		changeLocalConditions: React.PropTypes.func
+	};
+
 	render() {
+		const content =
+			      <SiteConditionsEditor site={this.props.site} changeLocalConditions={this.props.changeLocalConditions}/>;
 		return (
-			<div style={{
-				width: 25,
-				height: 25,
-				marginLeft: -12.5,
-				marginTop: -12.5,
-				borderRadius: 12.5,
-				background: `url(${icon})`,
-				// just to re-center this particular icon
-				backgroundSize: "175%",
-				backgroundPosition: "49% 33%",
-				backgroundColor: this.props.active ? "rgba(250,100,0,0.5)" : "transparent",
-			}} />
+			<Popover content={content} title={this.props.site.name}>
+				<div style={{
+					width          : 50,
+					height         : 50,
+					marginLeft     : -25,
+					marginTop      : -25,
+					borderRadius   : 25,
+					backgroundImage: `url(${icon})`,
+					// just to re-center this particular icon
+					backgroundSize : "100%",
+					cursor         : "pointer",
+				}}
+				     onClick={this.props.onClick}
+				     onMouseEnter={this.props.onMouseEnter}
+				     onMouseLeave={this.props.onMouseLeave}
+				/>
+			</Popover>
 		);
 	}
 }
-
-SiteMarker.propTypes = {};
-SiteMarker.defaultProps = {};
 
 export default SiteMarker;
 
