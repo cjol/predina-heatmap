@@ -209,9 +209,9 @@ class GoogleHeatmap extends React.Component {
 				zoom={this.props.zoom}
 				yesIWantToUseGoogleMapApiInternals
 				options={maps => ({
-					disableDefaultUI: false,
-					scrollwheel     : false,
-					draggable       : false,
+					disableDefaultUI: true,
+					scrollwheel     : true,
+					draggable       : true,
 					styles
 				})
 				}
