@@ -52,7 +52,6 @@ export default class Site {
 	}
 
 	updateConditions = ( localConditions, globalConditions ) => {
-		console.log("Calculating risk with ", localConditions, globalConditions);
 		for (const k of Object.keys( localConditions )) {
 			this.localConditions[ k ] = localConditions[ k ];
 		}
@@ -105,9 +104,9 @@ export default class Site {
 					break;
 			}
 
-			score += Math.random() * 3; //  fudge factor
+			score += Math.random() * 6; //  fudge factor
 
-			this.baseRisk = score * 10 / 11;
+			this.baseRisk = score * 10 / 14;
 		}
 	};
 

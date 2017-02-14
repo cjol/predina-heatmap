@@ -82,7 +82,7 @@ setInterval(
 			}
 		);
 	}, 10000
-)
+);
 
 async function clusterData( locations ) {
 
@@ -157,7 +157,13 @@ async function clusterData( locations ) {
 const api = {
 	async cluster() {
 		"use strict";
-		return (await clusterData( locations ));
+		const cluster = (await clusterData( locations ));
+		fs.writeFile(
+			'data/incidents_clustered_with_latlng.json',
+			JSON.stringify( cluster, null, '\t' ),
+			( err ) => console.error( err )
+		);
+		return cluster;
 	},
 	locations() {
 		"use strict";

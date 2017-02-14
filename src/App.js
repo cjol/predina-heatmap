@@ -9,6 +9,7 @@ import enGB from "antd/lib/locale-provider/en_US";
 import "moment/locale/en-gb";
 import Site from "./Site";
 import data from "../data/incidents_clustered_with_latlng.json";
+console.log(data[0]);
 
 moment.locale( 'en-gb' );
 
@@ -45,8 +46,10 @@ class App extends Component {
 							( s ) => {
 								const ss = new Site( cs );
 								ss.name  = s.name;
-								ss.lat   = s.lat;
-								ss.lng   = c.lng;
+								ss.lat   = cs.lat + Math.random() * 0.3 - 0.15;
+								ss.lng   = cs.lng + Math.random() * 0.3 - 0.15;
+								// ss.lat = s.lat;
+								// ss.lng = s.lng;
 								return ss;
 							}
 						);
