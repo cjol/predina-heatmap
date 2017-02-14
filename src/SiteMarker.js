@@ -25,7 +25,7 @@ class SiteMarker extends Component {
 					marginLeft     : -25,
 					marginTop      : -25,
 					borderRadius   : 25,
-					backgroundImage: `url(${icon})`,
+					background: `url(${icon})`,
 					// just to re-center this particular icon
 					backgroundSize : "100%",
 					cursor         : "pointer",

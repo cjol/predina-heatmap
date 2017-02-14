@@ -3,6 +3,7 @@ import morgan from "morgan";
 import express from "express";
 import path from "path";
 import api from "./api";
+import data from "."
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use( express.static( path.resolve( __dirname, '..', 'build' ) ) );
 
 // Serve the API
 app.get( '/api/locations', api.locations );
+app.get( '/api/cluster', api.cluster );
 
 // Always return the main index.html, so react-router render the route in the client
 app.get(

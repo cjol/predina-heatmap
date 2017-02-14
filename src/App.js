@@ -8,6 +8,7 @@ import {LocaleProvider} from "antd";
 import enGB from "antd/lib/locale-provider/en_US";
 import "moment/locale/en-gb";
 import Site from "./Site";
+import data from "../data/incidents_clustered_with_latlng.json";
 
 moment.locale( 'en-gb' );
 
@@ -20,33 +21,45 @@ class App extends Component {
 		const baseSite = new Site( { lat: 51.4834622, lng: -0.0586256 } );
 		baseSite.name  = "United Kingdom";
 
+
 		// level 1 - region
-		baseSite.subsites = getSites( 5, baseSite );
-		baseSite.subsites
-			.forEach(
-				s => {
-					s.name = "Region " + s.id;
 
-					// level 2 - city
-					s.subsites = getSites( 1, s );
-					s.subsites.forEach(
-						ss => {
-							ss.name = "City " + ss.id;
+		baseSite.subsites = data.map(
+			( r ) => {
+				const rs = new Site( baseSite );
+				rs.name  = r.name;
+				rs.lat   = r.lat;
+				rs.lng   = r.lng;
 
-							// level 3 - site
-							ss.subsites = getSites( 0.1, ss );
-							ss.subsites.forEach(
-								sss => {
-									sss.name = "Site " + sss.id;
+				// level 2 - city
+				rs.subsites = r.cities.map(
+					( c ) => {
 
-									// TODO: get risk from API
-									sss.baseRisk = Math.random() * 10;
-								}
-							);
-						}
-					);
-				}
-			);
+						const cs = new Site( rs );
+						cs.name  = c.name;
+						cs.lat   = c.lat;
+						cs.lng   = c.lng;
+
+						// level 3 - sites
+						cs.subsites = c.sites.map(
+							( s ) => {
+								const ss = new Site( cs );
+								ss.name  = s.name;
+								ss.lat   = s.lat;
+								ss.lng   = c.lng;
+								return ss;
+							}
+						);
+
+						return cs;
+					}
+				);
+
+				return rs;
+			}
+		);
+
+
 		this.baseSite = baseSite;
 
 		const riskPoints       = baseSite.flatChildren();
@@ -56,6 +69,8 @@ class App extends Component {
 			time    : { value: moment() },
 			daynight: { value: (new Date()).getHours() < 19 ? "day" : "night" },
 		};
+
+		baseSite.updateConditions({}, globalConditions);
 
 		// eslint-disable-next-line
 		this.state = {
@@ -94,15 +109,21 @@ class App extends Component {
 
 	changeGlobalConditions = ( changedFields ) => {
 
+		// choose the first key we find and check if it's clean or not
+		const keys = Object.keys(changedFields);
+
+		if (keys.length < 0) return; // no changes
+		if (changedFields[keys[0]].dirty) return; // don't bother updating if it's not done
+
 		this.setState(
-			state =>
-				({
+			state => {
+				// trick the base sites into re-generating risks
+				this.baseSite.updateConditions( {}, { ...state.globalConditions, ...changedFields } )
+				return {
 					...state,
 					globalConditions: { ...state.globalConditions, ...changedFields },
-				}),
-			// TODO: remove this
-			// trick the base sites into re-generating risks
-			() => this.baseSite.updateLocalConditions( {} )
+				}
+			}
 		);
 
 	};
@@ -114,6 +135,7 @@ class App extends Component {
 					<HeatMap
 						setActiveSite={this.setActiveSite}
 						viewLevel={ this.state.viewLevel }
+						globalConditions={this.state.globalConditions}
 						activeSite={this.state.activeSite}/>
 					<Menu sites={this.state.sites}
 					      goUpLevel={this.goUpLevel}
@@ -131,7 +153,7 @@ export default App;
 function getSites( scale = 0.01, parent = null ) {
 	const n = 10;
 	return new Array( n ).fill().map(
-		() => new Site( parent, scale )
+		() => Site.makeRandom( parent, scale )
 	);
 }
 

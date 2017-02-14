@@ -104,7 +104,6 @@ class GoogleHeatmap extends React.Component {
 
 	updateMap( props ) {
 
-		console.log( "Updating ", props.radius, props.maxIntensity, props.zoom );
 		// if we're updating, we should remove the old one
 		if (this.heatmap) {
 			this.heatmap.setMap( null );

@@ -73,14 +73,18 @@ class HeatMap extends React.Component {
 						                  lng={s.lng}
 						                  onClick={() => this.props.setActiveSite( s )}
 						                  changeLocalConditions={( e ) => {
-							                  s.updateLocalConditions( e );
+							                  // choose the first key we find and check if it's clean or not
+							                  const keys = Object.keys(e);
+
+							                  if (keys.length < 0) return; // no changes
+							                  if (e[keys[0]].dirty) return; // don't bother updating if it's not done
+
+							                  s.updateConditions( e, this.props.globalConditions );
 							                  // TODO: this is a little hacky and not the react way
 							                  this.forceUpdate();
 						                  }}
 						      />
 				      );
-			console.log("viewLevel, zoom, radius, intensity");
-			console.log(this.props.viewLevel, zoomLevels[this.props.viewLevel], radiusLevels[this.props.viewLevel],intensityLevels[this.props.viewLevel])
 			return (
 				<div style={{
 					position: "absolute",

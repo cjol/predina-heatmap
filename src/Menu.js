@@ -75,7 +75,7 @@ class Menu extends Component {
 								'time', {
 									rules   : [ { required: true, message: 'Please select a time!' } ],
 									onChange: ( value ) => {
-										// TODO: Not sure this is working but eh
+										// eslint-disable-next-line
 										const hours = value._d.getHours();
 										this.props.form.setFieldsValue(
 											{

@@ -7,17 +7,17 @@ let siteId = 0;
 
 const ReactType = React.PropTypes.shape(
 	{
-		id                   : React.PropTypes.string,
-		name                 : React.PropTypes.string,
-		lat                  : React.PropTypes.number,
-		lng                  : React.PropTypes.number,
-		baseRisk             : React.PropTypes.number,
-		subsites             : React.PropTypes.array,
-		parent               : React.PropTypes.object,
-		localConditions      : React.PropTypes.objectOf( React.PropTypes.shape( { value: React.PropTypes.string } ) ),
-		updateLocalConditions: React.PropTypes.func,
-		getRisk              : React.PropTypes.func,
-		flatChildren         : React.PropTypes.func,
+		id              : React.PropTypes.string,
+		name            : React.PropTypes.string,
+		lat             : React.PropTypes.number,
+		lng             : React.PropTypes.number,
+		baseRisk        : React.PropTypes.number,
+		subsites        : React.PropTypes.array,
+		parent          : React.PropTypes.object,
+		localConditions : React.PropTypes.objectOf( React.PropTypes.shape( { value: React.PropTypes.string } ) ),
+		updateConditions: React.PropTypes.func,
+		getRisk         : React.PropTypes.func,
+		flatChildren    : React.PropTypes.func,
 	}
 );
 
@@ -25,34 +25,89 @@ export default class Site {
 
 	static ReactType = ReactType;
 
-	constructor( parent = null, scale = 0 ) {
+	static makeRandom( parent = null, scale = 0 ) {
+		const s = new Site( parent );
+
 		const { lat, lng } = parent;
+		s.lat              = lat + Math.random() * scale - scale / 2;
+		s.lng              = lng + Math.random() * scale - scale / 2;
+		return s;
+	}
+
+	constructor( parent = null ) {
 
 		this.id       = "" + siteId++;
 		this.name     = "Un-named Site";
-		this.lat      = lat + Math.random() * scale - scale / 2;
-		this.lng      = lng + Math.random() * scale - scale / 2;
 		this.subsites = [];
 		this.baseRisk = 0;
-		this.parent   = parent.id?parent:null;
+		this.parent   = parent.id ? parent : null;
+		this.lat      = parent.lat;
+		this.lng      = parent.lng;
 
 		// local conditions
 		this.localConditions = {
-			weather: { value: "sunny" },
-			traffic: { value: "1" },
+			weather: { value: ["sunny", "rainy", "cloudy"][Math.floor(Math.random()*3)] },
+			traffic: { value: ["1", "2", "3"][Math.floor(Math.random()*3)] },
 		};
 	}
 
-	updateLocalConditions = ( conditions ) => {
-		for (let k of Object.keys( conditions )) {
-			this.localConditions[ k ] = conditions[ k ];
+	updateConditions = ( localConditions, globalConditions ) => {
+		console.log("Calculating risk with ", localConditions, globalConditions);
+		for (const k of Object.keys( localConditions )) {
+			this.localConditions[ k ] = localConditions[ k ];
 		}
 
 		if (this.subsites.length > 0) {
-			this.subsites.forEach( s => s.updateLocalConditions( conditions ) );
+			this.subsites.forEach( s => s.updateConditions( localConditions, globalConditions ) );
 		} else {
 			// TODO: connect this to the API!
-			this.baseRisk = Math.random() * 10;
+			let score = 0;
+
+			switch (this.localConditions.weather.value)  {
+				case "sunny":
+					score += 0;
+					break;
+				case "cloudy":
+					score += 1;
+					break;
+				case "rainy":
+					score += 3;
+					break;
+				default:
+					score += 1;
+					break;
+			}
+
+			switch (this.localConditions.traffic.value)  {
+				case "1":
+					score += 0;
+					break;
+				case "2":
+					score += 1;
+					break;
+				case "3":
+					score += 3;
+					break;
+				default:
+					score += 1;
+					break;
+			}
+
+			switch (globalConditions.daynight.value)  {
+				case "day":
+					score += 0;
+					break;
+				case "night":
+					score += 2;
+					break;
+				default:
+					score += 1;
+					break;
+			}
+
+			score += Math.random() * 3; //  fudge factor
+
+			this.baseRisk = score * 10 / 11;
 		}
 	};
 
@@ -73,14 +128,13 @@ export default class Site {
 		}
 
 		return [ this ];
-	}
+	};
 
 	subRisk = () => {
-		if (this.subsites.length < 1) return [this];
-		if (this.subsites[0].subsites.length < 1) return this.subsites;
+		if (this.subsites.length < 1) return [ this ];
+		if (this.subsites[ 0 ].subsites.length < 1) return this.subsites;
 
 		const nested = this.subsites.map( s => s.subsites );
-		console.log(nested);
 		return [].concat.apply( [], nested );
 	}
 
