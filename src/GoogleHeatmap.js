@@ -73,7 +73,7 @@ class GoogleHeatmap extends React.Component {
 	};
 
 	static defaultProps = {
-		zoom       : 1000,
+		zoom       : 5,
 		radius     : 20,
 		dissipating: true
 	};
@@ -82,6 +82,7 @@ class GoogleHeatmap extends React.Component {
 		const numTiles = 1 << this.map.getZoom();
 		const center   = this.map.getCenter();
 		const moved    = this.maps.geometry.spherical.computeOffset( center, 10000, 90 );
+
 		/*1000 meters to the right*/
 		const projection     = new MercatorProjection( this.maps );
 		const initCoord      = projection.fromLatLngToPoint( center );
@@ -110,21 +111,23 @@ class GoogleHeatmap extends React.Component {
 		}
 
 		// now create a new one (the old one should have no dangling references left so should be GC'd)
-		this.heatmap = new this.maps.visualization.HeatmapLayer(
-			{
-				data        : props.points.map(
-					p => ({ location: new this.maps.LatLng( p.lat, p.lng ), weight: p.weight })
-				),
-				dissipating : props.dissipating,
-				gradient    : props.gradient,
-				radius      : this.getNewRadius(),
-				maxIntensity: props.maxIntensity,
-				opacity     : 1
-			}
-		);
+		if (this.maps) {
+			this.heatmap = new this.maps.visualization.HeatmapLayer(
+				{
+					data        : props.points.map(
+						p => ({ location: new this.maps.LatLng( p.lat, p.lng ), weight: p.weight })
+					),
+					dissipating : props.dissipating,
+					gradient    : props.gradient,
+					radius      : this.getNewRadius(),
+					maxIntensity: props.maxIntensity,
+					opacity     : 1
+				}
+			);
 
-		// finally attach the new one
-		this.heatmap.setMap( this.map );
+			// finally attach the new one
+			this.heatmap.setMap( this.map );
+		}
 
 	}
 

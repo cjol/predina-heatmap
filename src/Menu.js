@@ -1,26 +1,133 @@
 /**
  * Created by cjol on 03/02/17.
  */
-import {TimePicker, Select, DatePicker, Button, Form} from "antd";
+import {TimePicker, Select, DatePicker, Form} from "antd";
 import React, {Component} from "react";
 import Nameplate from "./Nameplate";
+import _ from "lodash";
+import RiskMeter from "./RiskMeter";
 const FormItem = Form.Item;
 
 class Menu extends Component {
 	static propTypes = {
-		sites                 : React.PropTypes.arrayOf(
-			React.PropTypes.shape(
-				{
-					id  : React.PropTypes.string.isRequired,
-					name: React.PropTypes.string.isRequired
-				}
-			)
-		).isRequired,
+		country               : React.PropTypes.object,
+		activePoint           : React.PropTypes.object,
 		changeGlobalConditions: React.PropTypes.func.isRequired,
 	};
 
 	render() {
 		const { getFieldDecorator } = this.props.form;
+
+		const placeSelector = <div>
+
+			<h3>Region</h3>
+			<Select
+				style={{ flex: 1 }}
+				allowClear
+				onChange={( v ) => v ?
+					this.props.setActivePoint( this.props.country.regions[ v ] ) :
+					this.props.setActivePoint( this.props.country )}
+			>
+				{_.sortBy(_.values( this.props.country.regions ), 'name').map(
+					r =>
+						<Select.Option
+							key={r.name}
+							value={r.name}
+						>{r.name} ({Math.floor(r.risk*10)})</Select.Option>
+				)}
+			</Select>
+
+			<h3>City</h3>
+			{ this.props.activePoint.region ?
+				<Select
+					onChange={( v ) => v ?
+						this.props.setActivePoint( this.props.country.regions[ this.props.activePoint.region ].cities[ v ] ) :
+						this.props.setActivePoint( this.props.country.regions[ this.props.activePoint.region ] )}
+					allowClear
+				>
+					{_.sortBy(_.values( this.props.country.regions[ this.props.activePoint.region ].cities ), 'name').map(
+						r =>
+							<Select.Option
+								key={r.name}
+								value={r.name}
+							>{r.name} ({Math.floor(r.risk*10)})</Select.Option>
+					)}
+				</Select>
+				: <Select disabled/>}
+
+			<h3>Account</h3>
+			{ this.props.activePoint.region && this.props.activePoint.city ?
+				<Select
+					onChange={( v ) => v ?
+						this.props.setActivePoint( this.props.country.regions[ this.props.activePoint.region ].cities[ this.props.activePoint.city ].accounts[ v ] ) :
+						this.props.setActivePoint( this.props.country.regions[ this.props.activePoint.region ].cities[ this.props.activePoint.city ] )}
+					allowClear
+				>
+					{_.sortBy(_.values( this.props.country.regions[ this.props.activePoint.region ].cities[ this.props.activePoint.city ].accounts, 'name') )
+						.map(
+							r =>
+								<Select.Option
+									key={r.name}
+									value={r.name}
+								>{r.name} ({Math.floor(r.risk * 10)})</Select.Option>
+						)}
+				</Select>
+				: <Select disabled/>}
+
+		</div>;
+
+		const riskMeter = <RiskMeter style={{marginTop:30, marginBottom:30}}
+		                             risk={this.props.activePoint.risk}/>;
+
+		const conditions = <div>
+			<h3>Date</h3>
+			<FormItem
+				>
+				{getFieldDecorator(
+					'date', {
+						rules: [ { required: true, message: 'Please select a date!' } ],
+					}
+				)(
+					<DatePicker style={{ width: "100%" }}/>
+				)}
+			</FormItem>
+
+			<h3>Time</h3>
+			<FormItem
+				>
+				{getFieldDecorator(
+					'time', {
+						rules   : [ { required: true, message: 'Please select a time!' } ],
+						onChange: ( value ) => {
+							// eslint-disable-next-line
+							// const hours = value._d.getHours();
+							// this.props.form.setFieldsValue(
+							// {
+							// night: hours > 19
+							// }
+							// );
+						}
+					}
+				)(
+					<TimePicker style={{ width: "100%" }} format={'HH:00'}/>
+				)}
+			</FormItem>
+
+			{/*<FormItem*/}
+			{/*label="Day/Night">*/}
+			{/*{getFieldDecorator(*/}
+			{/*'night', {*/}
+			{/*rules: [ { required: true, message: 'Please select day/night!' } ],*/}
+			{/*}*/}
+			{/*)(*/}
+			{/*<Select disabled>*/}
+			{/*<Select.Option value="day">Day</Select.Option>*/}
+			{/*<Select.Option value="night">Night</Select.Option>*/}
+			{/*</Select>*/}
+			{/*)}*/}
+			{/*</FormItem>*/}
+		</div>;
+
 		return (
 			<div style={{
 				padding        : 10,
@@ -44,64 +151,12 @@ class Menu extends Component {
 					}}>
 						<Nameplate />
 
-						<h2
-						style={{
-							paddingTop:10
-						}}>
-							{this.props.activeSite.name}
-						</h2>
-						{this.props.activeSite.parent ?
-							<Button onClick={this.props.goUpLevel}>Go Back</Button>
-							:
-							<div/>}
+						{placeSelector}
 
-						<FormItem
-							style={{
-								paddingTop:10
-							}}
-							label="Date">
-							{getFieldDecorator(
-								'date', {
-									rules: [ { required: true, message: 'Please select a date!' } ],
-								}
-							)(
-								<DatePicker style={{ width: "100%" }}/>
-							)}
-						</FormItem>
+						{riskMeter}
 
-						<FormItem
-							label="Time">
-							{getFieldDecorator(
-								'time', {
-									rules   : [ { required: true, message: 'Please select a time!' } ],
-									onChange: ( value ) => {
-										// eslint-disable-next-line
-										const hours = value._d.getHours();
-										this.props.form.setFieldsValue(
-											{
-												daynight: hours > 19 ? "night" : "day"
-											}
-										);
-									}
-								}
-							)(
-								<TimePicker style={{ width: "100%" }}/>
-							)}
-						</FormItem>
+						{conditions}
 
-						<FormItem
-							label="Day/Night">
-							{getFieldDecorator(
-								'daynight', {
-									rules: [ { required: true, message: 'Please select day/night!' } ],
-								}
-							)(
-								<Select disabled>
-									<Select.Option value="day">Day</Select.Option>
-									<Select.Option value="night">Night</Select.Option>
-								</Select>
-							)}
-						</FormItem>
 					</div>
 
 				</Form>
@@ -119,15 +174,15 @@ export default Form.create(
 
 		mapPropsToFields: ( props ) => {
 			return {
-				daynight: {
-					...props.daynight,
-					value: props.daynight.value
-				},
-				time    : {
+				// night: {
+				// 	...props.night,
+				// 	value: props.night.value
+				// },
+				time: {
 					...props.time,
 					value: props.time.value
 				},
-				date    : {
+				date: {
 					...props.date,
 					value: props.date.value
 				},

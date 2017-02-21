@@ -1,150 +1,298 @@
 import React, {Component} from "react";
-import HeatMap from "./HeatMap";
-import Menu from "./Menu";
 import moment from "moment";
 import "./App.css";
 import "antd/dist/antd.css";
 import {LocaleProvider} from "antd";
 import enGB from "antd/lib/locale-provider/en_US";
+import _ from "lodash";
 import "moment/locale/en-gb";
-import Site from "./Site";
-import data from "../data/incidents_clustered_with_latlng.json";
-console.log(data[0]);
+import axios from "axios";
+import Menu from "./Menu";
+import HeatMap from "./HeatMap";
 
 moment.locale( 'en-gb' );
+
+const modeBy = ( collection, iteratee ) =>
+	_.chain( collection )
+		.countBy( iteratee )
+		.toPairs()
+		.maxBy( _.last )
+		.head()
+		// in this implementation string "undefined" is returned if iteratee returning
+		// non existing property is given
+		.thru( value => value === 'undefined' ? undefined : value )
+		.value();
+
+function aggregateChildren( accs ) {
+	const accounts   = _.values( accs );
+	const latitude   = accounts.reduce( ( acc, { latitude } ) => acc + latitude, 0 ) / accounts.length,
+	      longitude  = accounts.reduce( ( acc, { longitude } ) => acc + longitude, 0 ) / accounts.length,
+	      risk       = accounts.reduce( ( acc, { risk } ) => acc + risk, 0 ) / accounts.length,
+	      conditions = {
+		      temperature    : {value: accounts.reduce(
+			      ( acc, { conditions } ) => acc + conditions.temperature.value,
+			      0
+		      ) / accounts.length},
+		      windspeed      : {value: accounts.reduce(
+			      ( acc, { conditions } ) => acc + conditions.windspeed.value,
+			      0
+		      ) / accounts.length},
+		      visibility     : {value: accounts.reduce(
+			      ( acc, { conditions } ) => acc + conditions.visibility.value,
+			      0
+		      ) / accounts.length},
+		      weather_summary: { value: modeBy( accounts, acc => acc.conditions.weather_summary.value ) }
+	      };
+
+	return { latitude, longitude, risk, conditions };
+}
+
+
+function upsertAccount( country, account ) {
+	const { region: new_region, city: new_city, name: new_account } = account;
+
+	const newCountry = {
+		regions: {
+			[new_region]: {
+				name  : new_region,
+				region: new_region,
+				type  : "region",
+				cities: {
+					[new_city]: {
+						name    : new_city,
+						type    : "city",
+						region  : new_region,
+						city    : new_city,
+						accounts: {
+							[new_account]: {
+								type      : "account",
+								region    : new_region,
+								city      : new_city,
+								account   : new_account,
+								...account,
+								conditions: account.conditions ||
+								{
+									temperature    : { value: 0 },
+									visibility     : { value: 0 },
+									windspeed      : { value: 0 },
+									weather_summary: { value: "Partly Cloudy" }
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	};
+
+	return _.merge( country, newCountry );
+
+	// NB this will result in an inconsistent state as averages haven't been updated yet
+}
+
+function recalcAggregates( country ) {
+
+	const regions = _.mapValues(
+		_.pickBy( country.regions, r => _.keys( r.cities ).length > 0 ),
+		region => {
+			const cities = _.mapValues(
+				_.pickBy( region.cities, c => _.keys( c.accounts ).length > 0 ),
+				city => ({
+					...city,
+					accounts: city.accounts,
+					...aggregateChildren( city.accounts )
+				})
+			);
+
+			return {
+				...region,
+				cities,
+				...aggregateChildren( cities )
+			};
+		}
+	);
+
+	return {
+		...country,
+		regions,
+		...aggregateChildren( regions )
+	};
+}
+
+const flattenCity    = city => _.values( city.accounts );
+const flattenRegion  = region => _.flatMap( _.values( region.cities ), flattenCity );
+const flattenCountry = country => _.flatMap( _.values( country.regions ), flattenRegion );
+const flattenAll = (thing) => {
+	if (thing.account) return [thing];
+	if (thing.city) return flattenCity(thing);
+	if (thing.region) return flattenRegion(thing);
+	if (thing.country) return flattenCountry(thing);
+	return [];
+}
 
 class App extends Component {
 
 	constructor() {
 		super();
 
-		// level 0 - country
-		const baseSite = new Site( { lat: 51.4834622, lng: -0.0586256 } );
-		baseSite.name  = "United Kingdom";
+		const country = { name: "United Kingdom", type: "country", regions: {} };
 
-
-		// level 1 - region
-
-		baseSite.subsites = data.map(
-			( r ) => {
-				const rs = new Site( baseSite );
-				rs.name  = r.name;
-				rs.lat   = r.lat;
-				rs.lng   = r.lng;
-
-				// level 2 - city
-				rs.subsites = r.cities.map(
-					( c ) => {
-
-						const cs = new Site( rs );
-						cs.name  = c.name;
-						cs.lat   = c.lat;
-						cs.lng   = c.lng;
-
-						// level 3 - sites
-						cs.subsites = c.sites.map(
-							( s ) => {
-								const ss = new Site( cs );
-								ss.name  = s.name;
-								ss.lat   = cs.lat + Math.random() * 0.3 - 0.15;
-								ss.lng   = cs.lng + Math.random() * 0.3 - 0.15;
-								// ss.lat = s.lat;
-								// ss.lng = s.lng;
-								return ss;
-							}
-						);
-
-						return cs;
-					}
-				);
-
-				return rs;
-			}
-		);
-
-
-		this.baseSite = baseSite;
-
-		const riskPoints       = baseSite.flatChildren();
-		const sites            = baseSite.subsites;
 		const globalConditions = {
-			date    : { value: moment() },
-			time    : { value: moment() },
-			daynight: { value: (new Date()).getHours() < 19 ? "day" : "night" },
+			date : { value: moment() },
+			time : { value: moment() },
+			night: { value: (new Date()).getHours() > 19 },
 		};
-
-		baseSite.updateConditions({}, globalConditions);
 
 		// eslint-disable-next-line
 		this.state = {
-			sites     : sites,
-			activeSite: baseSite,
-			viewLevel : 0,
-			riskPoints,
+			country    : country,
+			activePoint: country,
+			riskPoints : [],
 			globalConditions,
 		};
 	}
 
-	goUpLevel = () => {
-		const parent = this.state.activeSite.parent;
-		if (parent !== null) {
-			this.setState(
-				{
-					activeSite: parent,
-					viewLevel : this.state.viewLevel - 1,
-				},
-				// intensities stack in a funny way if you don't do this. Not sure why
-				() => this.forceUpdate()
-			);
-		}
+	componentDidMount = async() => {
+
+		await this.getFreshAccounts();
+
+		await this.updateAccounts( flattenCountry( this.state.country ) );
 	};
 
-	setActiveSite = ( s ) => {
-		if (s.subsites.length > 0) {
-			this.setState(
+
+	insertAccounts = async( accounts ) => {
+
+		const exactive = this.state.activePoint;
+
+		const country = recalcAggregates(
+			accounts.reduce(
+				( country, account ) => upsertAccount( country, account ),
+				this.state.country
+			)
+		);
+
+		let activePoint = country;
+		if (exactive.region) activePoint = country.regions[ exactive.region ];
+		if (exactive.city) activePoint = country.regions[ exactive.region ].cities[ exactive.city ];
+		if (exactive.account) activePoint = country.regions[ exactive.region ].cities[ exactive.city ].accounts[ exactive.account ];
+
+		return new Promise(
+			resolve => this.setState(
 				{
-					activeSite: s,
-					viewLevel : this.state.viewLevel + 1,
-				}
-			);
+					country,
+					activePoint,
+					riskPoints: flattenCountry( country )
+				}, resolve
+			)
+		);
+	};
+
+	updateAccounts = async( accounts ) => {
+		const global_conditions = {
+			date : this.state.globalConditions.date.value.format( "YYYYMMDD" ),
+			time : this.state.globalConditions.time.value.format( "HHmm00" ),
+			night: this.state.globalConditions.night.value
+		};
+
+		const result = await axios.post(
+			'http://amey.predina.com/api/risk', {
+				global_conditions,
+				accounts
+			}
+		);
+
+		if (result.statusText !== "OK") {
+			alert( "Could not reach API server" );
+			throw new Error( "Could not reach API server;" );
 		}
+
+		return this.insertAccounts( result.data );
+	};
+
+	getFreshAccounts = async() => {
+
+		// TODO: fill this in from API or something
+		const result = await axios.get( 'http://amey.predina.com/api/risk' );
+		if (result.statusText !== "OK") {
+			alert( "Could not reach API server" );
+			throw new Error( "Could not reach API server;" );
+		}
+
+		const allAccounts = result.data;
+
+		return this.insertAccounts( allAccounts );
+	};
+
+	setActivePoint = ( s ) => {
+		this.setState(
+			{
+				activePoint: s,
+			}
+		);
 	};
 
 	changeGlobalConditions = ( changedFields ) => {
 
 		// choose the first key we find and check if it's clean or not
-		const keys = Object.keys(changedFields);
+		const keys = Object.keys( changedFields );
 
 		if (keys.length < 0) return; // no changes
-		if (changedFields[keys[0]].dirty) return; // don't bother updating if it's not done
+		if (changedFields[ keys[ 0 ] ].dirty) return; // don't bother updating if it's not done
 
 		this.setState(
 			state => {
-				// trick the base sites into re-generating risks
-				this.baseSite.updateConditions( {}, { ...state.globalConditions, ...changedFields } )
 				return {
 					...state,
 					globalConditions: { ...state.globalConditions, ...changedFields },
-				}
-			}
+				};
+			},
+			() => this.updateAccounts( flattenCountry( this.state.country ) )
 		);
 
 	};
 
+	setLocalConditions = async( site, conditions ) => {
+
+		const accounts = flattenAll(site).map(s => ({
+			...s,
+			conditions: {
+				...s.conditions,
+				...conditions
+			}
+		}));
+
+		return this.updateAccounts( accounts );
+	};
+
 	render() {
+
+		let markers = <div />;
+		if (this.state.activePoint.account || this.state.activePoint.city) {
+			markers = [ this.state.activePoint ];
+		} else if (this.state.activePoint.region) {
+			markers = this.state.country
+				.regions[ this.state.activePoint.region ]
+				.cities;
+		} else {
+			markers = this.state.country
+				.regions;
+		}
+
 		return (
 			<LocaleProvider locale={enGB}>
 				<div className="App">
 					<HeatMap
-						setActiveSite={this.setActiveSite}
-						viewLevel={ this.state.viewLevel }
-						globalConditions={this.state.globalConditions}
-						activeSite={this.state.activeSite}/>
-					<Menu sites={this.state.sites}
-					      goUpLevel={this.goUpLevel}
+						markers={_.values( markers )}
+						setActivePoint={this.setActivePoint}
+						setLocalConditions={this.setLocalConditions}
+						activePoint={this.state.activePoint}
+						riskPoints={this.state.riskPoints}
+					/>
+					<Menu country={this.state.country}
 					      {...this.state.globalConditions}
 					      changeGlobalConditions={this.changeGlobalConditions}
-					      activeSite={this.state.activeSite}/>
+					      setActivePoint={this.setActivePoint}
+					      activePoint={this.state.activePoint}/>
 				</div>
 			</LocaleProvider>
 		);
@@ -152,49 +300,3 @@ class App extends Component {
 }
 
 export default App;
-
-function getSites( scale = 0.01, parent = null ) {
-	const n = 10;
-	return new Array( n ).fill().map(
-		() => Site.makeRandom( parent, scale )
-	);
-}
-
-//
-// function localRisk( { lat:plat, lng:plng }, points ) {
-// 	const closestPoint = points.reduce(
-// 		( acc, curr ) => {
-//
-// 			const { lat, lng } = curr,
-// 			      { dist2 }    = acc,
-// 			      newDist2     = Math.pow( lat - plat, 2 ) + Math.pow( lng - plng, 2 );
-// 			if (newDist2 < dist2) {
-// 				return { dist2: newDist2, point: curr };
-// 			} else {
-// 				return acc;
-// 			}
-// 		}, { dist2: Infinity, point: { risk: 0 } }
-// 	);
-// 	console.log( closestPoint.point.risk );
-// 	return closestPoint.point.risk;
-// }
-//
-// function getPoints( sites, globalConditions ) {
-// 	const n      = 1;
-// 	// TODO: connect to API
-// 	const nested = sites.map(
-// 		s =>
-// 			Array( n ).fill().map(
-// 				() => ({
-// 					// lat : s.lat + Math.random() * 0.001 - 0.0005,
-// 					// lng : s.lng + Math.random() * 0.001 - 0.0005,
-// 					lat     : s.lat,
-// 					lng     : s.lng,
-// 					risk    : Math.random() * 10,
-// 				})
-// 			)
-// 	);
-// 	return [].concat.apply( [], nested );
-// }
-
-

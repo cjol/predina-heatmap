@@ -2,80 +2,123 @@
  * Created by christoph on 08/02/17.
  */
 import React from "react";
-import {Form, Select} from "antd";
-const FormItem = Form.Item;
-import xolor from "xolor";
+import {Button, Form, Select, InputNumber} from "antd";
 import Site from "./Site";
+import RiskMeter from "./RiskMeter";
+import axios from "axios";
+const FormItem = Form.Item;
 
 class SiteConditionsEditor extends React.Component {
 	static propTypes = {
-		form: React.PropTypes.object,
-		weather:React.PropTypes.shape({ value: React.PropTypes.string}),
-		traffic:React.PropTypes.shape({ value: React.PropTypes.string}),
+		form                 : React.PropTypes.object,
+		weather              : React.PropTypes.shape( { value: React.PropTypes.string } ),
 		changeLocalConditions: React.PropTypes.func,
-		site: Site.ReactType
+		site                 : Site.ReactType
+	};
+
+	getLiveConditions = async( { latitude, longitude } ) => {
+		const values = (await axios.get( `http://amey.predina.com/api/weather?lat=${latitude}&lng=${longitude}` ));
+		if (values.status !== 200) return alert( "Could not connect to weather API" );
+
+		this.props.form.setFieldsValue(
+			{
+				visibility : Math.floor( values.data.visibility ),
+				temperature: Math.floor( values.data.temperature ),
+				windspeed  : Math.floor( values.data.windSpeed ),
+				weather_summary  : values.data.summary,
+			}
+		);
+		this.props.hide();
 	};
 
 	render() {
 		const { getFieldDecorator } = this.props.form;
-		const gradientColor         = xolor( '#00d3a2' );
-		const risk = this.props.site.getRisk();
-		const riskColor             = gradientColor.gradient( '#ef3817', risk / 10 );
 
 		return (
-			<Form>
+			<Form style={{ minWidth: 200 }}>
+				<h1>{this.props.site.name}</h1>
 
-				<FormItem
-					label="Weather">
-					{getFieldDecorator(
-						'weather', {
-							rules: [ { required: true, message: 'Please select the weather at the point!' } ],
-						}
-					)(
-						<Select>
-							<Select.Option value="sunny">Sunny</Select.Option>
-							<Select.Option value="rainy">Rainy</Select.Option>
-							<Select.Option value="cloudy">Cloudy</Select.Option>
-						</Select>
-					)}
-				</FormItem>
-				<FormItem
-					label="Traffic">
-					{getFieldDecorator(
-						'traffic', {
-							rules: [ { required: true, message: 'Please select the traffic at the point!' } ],
-						}
-					)(
-						<Select>
-							<Select.Option value="1">Low</Select.Option>
-							<Select.Option value="2">Medium</Select.Option>
-							<Select.Option value="3">High</Select.Option>
-						</Select>
-					)}
-				</FormItem>
+				<RiskMeter risk={this.props.site.risk}/>
 
-
-				<div className="riskNumber">
-					<div style={{ position: "absolute", fontSize: "100%", top: 0, bottom: 0, left: 0 }}>
-						<div style={{
-							width     : 10,
-							position  : "absolute",
-							left      : 0,
-							top       : 0,
-							bottom    : 0,
-							background: "linear-gradient(to top, #00d3a2 0%,#53c6db 33%,#ea8825 66%,#ef3817 100%)"
-						}}></div>
-						<div style={{ position: "absolute", top: 0, left: 20 }}>High&nbsp;(10)</div>
-						<div style={{ position: "absolute", bottom: 0, left: 20 }}>Low&nbsp;(0)</div>
-					</div>
-					<div style={{
-						width: "100%",
-						color: riskColor
-					}}>
-						{Math.floor( risk )}
-					</div>
+				<div style={{ textAlign: "center" }}>
+					<Button onClick={() => this.getLiveConditions( this.props.site )}
+					        style={{ marginTop: 10 }}
+					        size="large"
+					        type="primary">
+						Get Live Conditions</Button>
 				</div>
 
+				{this.props.site.conditions ?
+					<FormItem
+						label="Weather">
+						{getFieldDecorator(
+							'weather_summary', {
+								rules: [ { required: true, message: 'Please select the weather at the point!' } ],
+							}
+						)(
+							<Select>
+								<Select.Option value="Breezy">Breezy</Select.Option>
+								<Select.Option value="Breezy and Mostly Cloudy">Breezy and Mostly Cloudy</Select.Option>
+								<Select.Option value="Breezy and Overcast">Breezy and Overcast</Select.Option>
+								<Select.Option value="Breezy and Partly Cloudy">Breezy and Partly Cloudy</Select.Option>
+								<Select.Option value="Clear">Clear</Select.Option>
+								<Select.Option value="Drizzle">Drizzle</Select.Option>
+								<Select.Option value="Drizzle and Windy">Drizzle and Windy</Select.Option>
+								<Select.Option value="Foggy">Foggy</Select.Option>
+								<Select.Option value="Heavy Rain">Heavy Rain</Select.Option>
+								<Select.Option value="Heavy Rain and Breezy">Heavy Rain and Breezy</Select.Option>
+								<Select.Option value="Light Rain">Light Rain</Select.Option>
+								<Select.Option value="Mostly Cloudy">Mostly Cloudy</Select.Option>
+								<Select.Option value="Overcast">Overcast</Select.Option>
+								<Select.Option value="Partly Cloudy">Partly Cloudy</Select.Option>
+								<Select.Option value="Rain">Rain</Select.Option>
+								<Select.Option value="Windy">Windy</Select.Option>
+								<Select.Option value="Windy and Mostly Cloudy">Windy and Mostly Cloudy</Select.Option>
+								<Select.Option value="Windy and Overcast">Windy and Overcast</Select.Option>
+								<Select.Option value="Windy and Partly Cloudy">Windy and Partly Cloudy</Select.Option>
+							</Select>
+						)}
+					</FormItem>
+					: <div />}
+
+				{this.props.site.conditions ?
+					<FormItem
+						label="Visibility">
+						{getFieldDecorator(
+							'visibility', {
+								rules: [ { required: true, message: 'Please select the visibility at this city!' } ],
+							}
+						)(
+							<InputNumber style={{width:"100%"}}/>
+						)}
+					</FormItem>
+					: <div />}
+
+				{this.props.site.conditions ?
+					<FormItem
+						label="Wind Speed">
+						{getFieldDecorator(
+							'windspeed', {
+								rules: [ { required: true, message: 'Please select the windspeed at this city!' } ],
+							}
+						)(
+							<InputNumber style={{width:"100%"}}/>
+						)}
+					</FormItem>
+					: <div />}
+
+				{this.props.site.conditions ?
+					<FormItem
+						label="Temperature">
+						{getFieldDecorator(
+							'temperature', {
+								rules: [ { required: true, message: 'Please select the temperature at this city!' } ],
+							}
+						)(
+							<InputNumber style={{width:"100%"}}/>
+						)}
+					</FormItem>
+					: <div />}
 
 			</Form>
 		);
@@ -91,14 +134,28 @@ export default Form.create(
 		},
 
 		mapPropsToFields: ( props ) => {
+			if (!props.site.conditions) return {
+				weather_summary: {},
+				temperature    : {},
+				visibility     : {},
+				windspeed      : {},
+			};
 			return {
-				traffic: {
-					...props.site.localConditions.traffic,
-					value: props.site.localConditions.traffic.value
+				temperature    : {
+					...props.site.conditions.temperature,
+					value: props.site.conditions.temperature.value
 				},
-				weather: {
-					...props.site.localConditions.weather,
-					value: props.site.localConditions.weather.value
+				windspeed      : {
+					...props.site.conditions.windspeed,
+					value: props.site.conditions.windspeed.value
+				},
+				visibility     : {
+					...props.site.conditions.visibility,
+					value: props.site.conditions.visibility.value
+				},
+				weather_summary: {
+					...props.site.conditions.weather_summary,
+					value: props.site.conditions.weather_summary.value
 				},
 			};
 		},
