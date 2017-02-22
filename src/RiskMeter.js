@@ -11,8 +11,9 @@ class RiskMeter extends Component {
 	};
 
 	render() {
-		const gradientColor = xolor( 'rgba(255,50,50,1)' );
-		const riskColor     = gradientColor.gradient( 'rgba(48,255,2,0)', this.props.risk );
+		const gradientColor = xolor( 'rgba(48,255,2,0)' );
+		const riskColor     = gradientColor.gradient('rgba(255,50,50,1)' , this.props.risk );
+
 		return <div style={this.props.style} className="riskNumber">
 			<div style={{ position: "absolute", fontSize: "100%", top: 0, bottom: 0, left: 0 }}>
 				<div style={{

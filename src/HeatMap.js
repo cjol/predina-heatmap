@@ -116,6 +116,7 @@ class HeatMap extends React.Component {
 					                    : this.props.activePoint.region ? 13
 					               : this.props.activePoint.country ? 10 : 8*/}
 					               radius={20000}
+					               maxIntensity={10}
 					               gradient={gradient}
 					               googleAPIKey="AIzaSyBrHnamVKGI2E-ZJ33HVtbLcefIaKijwbA">
 						{markers}

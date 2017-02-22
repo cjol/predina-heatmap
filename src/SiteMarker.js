@@ -34,8 +34,8 @@ class SiteMarker extends Component {
 	};
 
 	render() {
-		const gradientColor = xolor( 'rgba(255,50,50,1)' );
-		const riskColor     = gradientColor.gradient( 'rgba(48,255,2,0)', this.props.site.risk );
+		const gradientColor = xolor( 'rgba(48,255,2,0)' );
+		const riskColor     = gradientColor.gradient('rgba(255,50,50,1)' , this.props.site.risk );
 
 		const content =
 			      <SiteConditionsEditor site={this.props.site}

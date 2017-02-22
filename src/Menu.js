@@ -1,7 +1,7 @@
 /**
  * Created by cjol on 03/02/17.
  */
-import {TimePicker, Select, DatePicker, Form} from "antd";
+import {TimePicker, Select, DatePicker, Button, Form} from "antd";
 import React, {Component} from "react";
 import Nameplate from "./Nameplate";
 import _ from "lodash";
@@ -15,36 +15,63 @@ class Menu extends Component {
 		changeGlobalConditions: React.PropTypes.func.isRequired,
 	};
 
+	constructor() {
+		super();
+		this.state = {
+			country: "United Kingdom",
+			region: "",
+			city: "",
+			account: "",
+		};
+	}
+
 	render() {
 		const { getFieldDecorator } = this.props.form;
 
 		const placeSelector = <div>
 
 			<h3>Region</h3>
-			<Select
-				style={{ flex: 1 }}
-				allowClear
-				onChange={( v ) => v ?
-					this.props.setActivePoint( this.props.country.regions[ v ] ) :
-					this.props.setActivePoint( this.props.country )}
-			>
-				{_.sortBy(_.values( this.props.country.regions ), 'name').map(
-					r =>
-						<Select.Option
-							key={r.name}
-							value={r.name}
-						>{r.name} ({Math.floor(r.risk*10)})</Select.Option>
-				)}
-			</Select>
+			<div style={{display:"flex", flexDirection:"auto"}}>
+				<Select
+					value={this.state.region}
+					style={{ flex: 1 }}
+					onChange={( v ) => {
+						if (v) {
+							this.props.setActivePoint( this.props.country.regions[ v ] );
+						}
+						console.log("setting state", {region: v});
+						this.setState({region: v});
+					}}
+				>
+					{_.sortBy(_.values( this.props.country.regions ), 'name').map(
+						r =>
+							<Select.Option
+								key={r.name}
+								value={r.name}
+							>{r.name} ({Math.floor(r.risk*10)})</Select.Option>
+					)}
+				</Select>
+				<Button
+					onClick={() => {
+						this.props.setActivePoint( this.props.country );
+						this.setState( { region: "", city: "", account: "" } );
+					}}
+					type="dashed" icon="cross" />
+			</div>
 
 			<h3>City</h3>
+				<div style={{display:"flex", flexDirection:"auto"}}>
 			{ this.props.activePoint.region ?
-				<Select
-					onChange={( v ) => v ?
-						this.props.setActivePoint( this.props.country.regions[ this.props.activePoint.region ].cities[ v ] ) :
-						this.props.setActivePoint( this.props.country.regions[ this.props.activePoint.region ] )}
-					allowClear
-				>
+					<Select
+						value={this.state.city}
+						style={{ flex: 1 }}
+						onChange={( v ) => {
+							if (v) {
+								this.props.setActivePoint( this.props.country.regions[ this.props.activePoint.region ].cities[ v ] );
+							}
+							this.setState({city: v});
+						}}
+					>
 					{_.sortBy(_.values( this.props.country.regions[ this.props.activePoint.region ].cities ), 'name').map(
 						r =>
 							<Select.Option
@@ -53,15 +80,27 @@ class Menu extends Component {
 							>{r.name} ({Math.floor(r.risk*10)})</Select.Option>
 					)}
 				</Select>
-				: <Select disabled/>}
+				: <Select disabled value=""/>}
+			<Button
+				onClick={() => {
+					this.props.setActivePoint( this.props.country.regions[this.props.activePoint.region] );
+					this.setState( { city: "", account: "" } );
+				}}
+				type="dashed" icon="cross" />
+		</div>
 
 			<h3>Account</h3>
+			<div style={{display:"flex", flexDirection:"auto"}}>
 			{ this.props.activePoint.region && this.props.activePoint.city ?
 				<Select
-					onChange={( v ) => v ?
-						this.props.setActivePoint( this.props.country.regions[ this.props.activePoint.region ].cities[ this.props.activePoint.city ].accounts[ v ] ) :
-						this.props.setActivePoint( this.props.country.regions[ this.props.activePoint.region ].cities[ this.props.activePoint.city ] )}
-					allowClear
+					value={this.state.account}
+					style={{ flex: 1 }}
+					onChange={( v ) => {
+						if (v) {
+							this.props.setActivePoint( this.props.country.regions[ this.props.activePoint.region ].cities[ this.props.activePoint.city ].accounts[ v ] );
+						}
+						this.setState({account: v});
+					}}
 				>
 					{_.sortBy(_.values( this.props.country.regions[ this.props.activePoint.region ].cities[ this.props.activePoint.city ].accounts, 'name') )
 						.map(
@@ -72,7 +111,14 @@ class Menu extends Component {
 								>{r.name} ({Math.floor(r.risk * 10)})</Select.Option>
 						)}
 				</Select>
-				: <Select disabled/>}
+				: <Select disabled value=""/>}
+			<Button
+				onClick={() => {
+					this.props.setActivePoint( this.props.country.regions[this.props.activePoint.region].cities[this.props.activePoint.city] );
+					this.setState( { account: "" } );
+				}}
+				type="dashed" icon="cross" />
+			</div>
 
 		</div>;
 
